@@ -1,4 +1,4 @@
-﻿namespace CoreMinimalAPI
+﻿namespace CoreMinimalAPI.Todo
 {
     public class Todo
     {
