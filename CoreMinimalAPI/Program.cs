@@ -7,9 +7,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<TodoDb>(opt => opt.UseInMemoryDatabase("TodoList"));
 builder.Services.AddDbContext<EmployeeDb>(opt => opt.UseInMemoryDatabase("EmployeeList"));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddCors();
-builder.Services.AddAuthentication().AddJwtBearer();//AddJwtBearer("LocalAuthIssuer"); ;
+builder.Services.AddAuthentication().AddJwtBearer(options =>
+{
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents()
+    {
+        OnAuthenticationFailed = failed =>
+        {
+            Console.WriteLine($"{failed.Exception.Message}: {Convert.ToString(failed.Exception.StackTrace)}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = validated =>
+        {
+            Console.WriteLine("Token Validated");
+            return Task.CompletedTask;
+        }
+    };
+});//AddJwtBearer("LocalAuthIssuer"); ;
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("admin_policy", policy =>
     {
@@ -25,7 +41,12 @@ builder.Services.AddOpenApiDocument(config =>
     config.Title = "TodoAPI v1";
     config.Version = "v1";
 });
+
+// *** Building the app here *** ///
 var app = builder.Build();
+
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 app.UseCors();
 app.UseAuthentication();
@@ -56,5 +77,7 @@ app.MapGet("/", () =>
 TodoApi.MapRoutes(app);
 EmployeeApi.MapRoutes(app);
 
+app.Map("/exception", ()
+    => { throw new InvalidOperationException("Sample Exception"); });
 
 app.Run();
